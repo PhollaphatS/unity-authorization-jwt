@@ -9,9 +9,9 @@ import (
 // ValidateToken validates an access or refresh token.
 func ValidateToken(tokenString, tokenType string) (jwt.MapClaims, error) {
 	var secretKey string
-	if tokenType == "access" {
+	if tokenType == "access_token" {
 		secretKey = utils.GetEnv("JWT_ACCESS_SECRET_KEY", "default-access-secret")
-	} else if tokenType == "refresh" {
+	} else if tokenType == "refresh_token" {
 		secretKey = utils.GetEnv("JWT_REFRESH_SECRET_KEY", "default-refresh-secret")
 	} else {
 		return nil, errors.New("invalid token type")
