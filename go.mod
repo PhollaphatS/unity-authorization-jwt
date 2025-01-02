@@ -1,4 +1,4 @@
-module github.com/phollaphat/unity-authorization-jwt
+module github.com/PhollaphatS/unity-authorization-jwt
 
 go 1.23.3
 
