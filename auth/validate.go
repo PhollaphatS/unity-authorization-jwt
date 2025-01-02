@@ -2,8 +2,8 @@ package auth
 
 import (
 	"errors"
+	"github.com/PhollaphatS/unity-authorization-jwt/utils"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/phollaphat/unity-authorization-jwt/utils"
 )
 
 // ValidateToken validates an access or refresh token.

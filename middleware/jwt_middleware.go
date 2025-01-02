@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/phollaphat/unity-authorization-jwt/auth"
 	"net/http"
 	"strings"
 )

@@ -1,8 +1,8 @@
 package auth
 
 import (
+	"github.com/PhollaphatS/unity-authorization-jwt/utils"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/phollaphat/unity-authorization-jwt/utils"
 	"time"
 )
 
