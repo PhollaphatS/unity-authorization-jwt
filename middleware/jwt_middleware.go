@@ -1,4 +1,4 @@
-package lib
+package middleware
 
 import (
 	"github.com/PhollaphatS/unity-authorization-jwt/auth"
