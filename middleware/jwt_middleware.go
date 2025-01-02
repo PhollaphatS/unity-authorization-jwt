@@ -1,4 +1,4 @@
-package middleware
+package lib
 
 import (
 	"github.com/PhollaphatS/unity-authorization-jwt/auth"
@@ -7,26 +7,39 @@ import (
 	"strings"
 )
 
-// JWTMiddleware validates access or refresh tokens.
 func JWTMiddleware(tokenType string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Get the Authorization header
 		tokenString := c.GetHeader("Authorization")
 		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing Authorization header"})
-			c.Abort()
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing Authorization header"})
+			c.Abort() // Stop further processing
 			return
 		}
 
+		// Strip the Bearer prefix if it exists
 		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
-		claims, err := auth.ValidateToken(tokenString, tokenType)
+
+		// Validate the token using the provided token type (if necessary)
+		var claims interface{}
+		var err error
+		if tokenType != "" {
+			claims, err = auth.ValidateToken(tokenString, tokenType) // Use your custom validation
+		} else {
+			claims, err = auth.DecodeAccessToken(tokenString) // Fallback to general decode if no token type is specified
+		}
+
+		// Handle error during validation
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-			c.Abort()
+			c.Abort() // Stop further processing
 			return
 		}
 
-		// Store claims in context for use in handlers
+		// Attach the claims to the context for access in handlers
 		c.Set("claims", claims)
+
+		// Continue processing the request
 		c.Next()
 	}
 }
