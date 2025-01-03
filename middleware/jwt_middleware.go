@@ -43,3 +43,32 @@ func JWTMiddleware(tokenType string) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func RegenerateTokenMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get the Authorization header
+		tokenString := c.GetHeader("Authorization")
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing Authorization header"})
+			c.Abort()
+			return
+		}
+
+		// Strip the "Bearer " prefix if it exists
+		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
+
+		// Extract claims from the expired token
+		claims, err := auth.ExtractClaimsFromExpiredToken(tokenString)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			c.Abort()
+			return
+		}
+
+		// Attach the claims to the context
+		c.Set("claims", claims)
+
+		// Continue processing the request
+		c.Next()
+	}
+}
