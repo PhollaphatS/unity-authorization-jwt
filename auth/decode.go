@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"github.com/PhollaphatS/unity-authorization-jwt/utils"
 	"github.com/golang-jwt/jwt/v5"
@@ -35,4 +36,19 @@ func DecodeAccessToken(accessToken string) (map[string]interface{}, error) {
 	}
 
 	return nil, ErrUnauthorized
+}
+
+func ExtractClaimsFromExpiredToken(tokenString string) (jwt.MapClaims, error) {
+	// Parse the token without validating the expiration time
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{})
+	if err != nil {
+		return nil, errors.New("failed to parse token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, errors.New("failed to extract claims from token")
+	}
+
+	return claims, nil
 }
