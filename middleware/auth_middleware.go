@@ -41,3 +41,34 @@ func AuthMiddleware(config AuthConfig) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func AuthWithoutExpTimeMiddleware(config AuthConfig) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Skip authentication for specified paths
+		for _, path := range config.SkipPaths {
+			if c.Request.URL.Path == path {
+				c.Next()
+				return
+			}
+		}
+
+		// Extract and validate the token without validating the expiration
+		claims, err := auth.ValidateTokenIgnoreExpiry(c.GetHeader("Authorization"), "access")
+		if err != nil {
+			c.JSON(401, gin.H{"error": "Unauthorized: " + err.Error()})
+			c.Abort()
+			return
+		}
+
+		// Check if the required role matches (if any)
+		if config.RequireRole != "" && claims.Role != config.RequireRole {
+			c.JSON(403, gin.H{"error": "Forbidden: insufficient role"})
+			c.Abort()
+			return
+		}
+
+		// Store the claims in the context for further use
+		c.Set("claims", claims)
+		c.Next()
+	}
+}

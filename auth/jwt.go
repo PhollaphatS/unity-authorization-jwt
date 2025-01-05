@@ -150,3 +150,33 @@ func HandleAuthError(c *gin.Context, err error) {
 	c.JSON(401, gin.H{"error": err.Error()})
 	c.Abort()
 }
+
+func ValidateTokenIgnoreExpiry(tokenString, tokenType string) (*JWTClaims, error) {
+	// Retrieve the appropriate secret key
+	var secretKey string
+	switch tokenType {
+	case "access":
+		secretKey = os.Getenv("JWT_ACCESS_SECRET")
+	case "refresh":
+		secretKey = os.Getenv("JWT_REFRESH_SECRET")
+	default:
+		return nil, fmt.Errorf("invalid token type")
+	}
+
+	if secretKey == "" {
+		secretKey = "default-secret" // Default for development
+	}
+
+	// Parse token without validating "exp"
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, &JWTClaims{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse token: %w", err)
+	}
+
+	claims, ok := token.Claims.(*JWTClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	return claims, nil
+}
