@@ -82,20 +82,20 @@ func ValidateToken(tokenString, tokenType string) (*JWTClaims, error) {
 }
 
 // GenerateToken creates a new JWT token
-func GenerateToken(credentialID, customerID, role, tokenType string) (string, error) {
-	// Helper function to get secret and expiration based on token type
+func GenerateToken(tokenType string, args ...string) (string, error) {
+	// Helper to get secret and expiration
 	getTokenConfig := func(tokenType string) (string, time.Duration, error) {
 		switch tokenType {
 		case "access":
 			secretKey := os.Getenv("JWT_ACCESS_SECRET")
 			if secretKey == "" {
-				secretKey = "default-access-secret" // Default for development
+				secretKey = "default-access-secret"
 			}
 			return secretKey, 15 * time.Minute, nil
 		case "refresh":
 			secretKey := os.Getenv("JWT_REFRESH_SECRET")
 			if secretKey == "" {
-				secretKey = "default-refresh-secret" // Default for development
+				secretKey = "default-refresh-secret"
 			}
 			return secretKey, 7 * 24 * time.Hour, nil
 		default:
@@ -103,20 +103,24 @@ func GenerateToken(credentialID, customerID, role, tokenType string) (string, er
 		}
 	}
 
-	// Get secret key and expiration duration
+	// Get secret and expiration
 	secretKey, expDuration, err := getTokenConfig(tokenType)
 	if err != nil {
 		return "", err
 	}
 
-	// Define claims based on token type
+	// Create claims based on token type
 	var claims jwt.Claims
 	switch tokenType {
 	case "access":
+		// Ensure required arguments are provided
+		if len(args) < 3 {
+			return "", fmt.Errorf("access token requires credentialID, customerID, and role")
+		}
 		claims = JWTClaims{
-			CredentialID: credentialID,
-			CustomerID:   customerID,
-			Role:         role,
+			CredentialID: args[0],
+			CustomerID:   args[1],
+			Role:         args[2],
 			RegisteredClaims: jwt.RegisteredClaims{
 				ExpiresAt: jwt.NewNumericDate(time.Now().Add(expDuration)),
 				IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -124,8 +128,12 @@ func GenerateToken(credentialID, customerID, role, tokenType string) (string, er
 			},
 		}
 	case "refresh":
+		// Ensure required argument is provided
+		if len(args) < 1 {
+			return "", fmt.Errorf("refresh token requires credentialID")
+		}
 		claims = jwt.MapClaims{
-			"credential_id": credentialID,
+			"credential_id": args[0],
 			"exp":           time.Now().Add(expDuration).Unix(),
 			"iat":           time.Now().Unix(),
 		}
