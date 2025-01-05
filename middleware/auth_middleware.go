@@ -52,8 +52,16 @@ func AuthWithoutExpTimeMiddleware(config AuthConfig) gin.HandlerFunc {
 			}
 		}
 
-		// Extract and validate the token without validating the expiration
-		claims, err := auth.ValidateTokenIgnoreExpiry(c.GetHeader("Authorization"), "access")
+		// Extract token from the Authorization header
+		token, err := auth.ExtractToken(c)
+		if err != nil {
+			c.JSON(401, gin.H{"error": "Unauthorized: " + err.Error()})
+			c.Abort()
+			return
+		}
+
+		// Validate the token without checking the expiration
+		claims, err := auth.ValidateTokenIgnoreExpiry(token, "access")
 		if err != nil {
 			c.JSON(401, gin.H{"error": "Unauthorized: " + err.Error()})
 			c.Abort()
