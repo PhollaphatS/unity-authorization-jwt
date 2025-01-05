@@ -82,35 +82,58 @@ func ValidateToken(tokenString, tokenType string) (*JWTClaims, error) {
 }
 
 // GenerateToken creates a new JWT token
-func GenerateToken(credentialID, customerID, role string, tokenType string) (string, error) {
-	var secretKey string
-	var expTime int64
+func GenerateToken(credentialID, customerID, role, tokenType string) (string, error) {
+	// Helper function to get secret and expiration based on token type
+	getTokenConfig := func(tokenType string) (string, time.Duration, error) {
+		switch tokenType {
+		case "access":
+			secretKey := os.Getenv("JWT_ACCESS_SECRET")
+			if secretKey == "" {
+				secretKey = "default-access-secret" // Default for development
+			}
+			return secretKey, 15 * time.Minute, nil
+		case "refresh":
+			secretKey := os.Getenv("JWT_REFRESH_SECRET")
+			if secretKey == "" {
+				secretKey = "default-refresh-secret" // Default for development
+			}
+			return secretKey, 7 * 24 * time.Hour, nil
+		default:
+			return "", 0, fmt.Errorf("invalid token type: %s", tokenType)
+		}
+	}
 
+	// Get secret key and expiration duration
+	secretKey, expDuration, err := getTokenConfig(tokenType)
+	if err != nil {
+		return "", err
+	}
+
+	// Define claims based on token type
+	var claims jwt.Claims
 	switch tokenType {
 	case "access":
-		secretKey = os.Getenv("JWT_ACCESS_SECRET")
-		expTime = jwt.NewNumericDate(time.Now().Add(15 * time.Minute)).Unix()
+		claims = JWTClaims{
+			CredentialID: credentialID,
+			CustomerID:   customerID,
+			Role:         role,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(expDuration)),
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+				NotBefore: jwt.NewNumericDate(time.Now()),
+			},
+		}
 	case "refresh":
-		secretKey = os.Getenv("JWT_REFRESH_SECRET")
-		expTime = jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)).Unix()
+		claims = jwt.MapClaims{
+			"credential_id": credentialID,
+			"exp":           time.Now().Add(expDuration).Unix(),
+			"iat":           time.Now().Unix(),
+		}
 	default:
-		return "", fmt.Errorf("invalid token type")
+		return "", fmt.Errorf("unsupported token type")
 	}
 
-	if secretKey == "" {
-		secretKey = "default-secret" // Default for development
-	}
-
-	claims := JWTClaims{
-		CredentialID: credentialID,
-		CustomerID:   customerID,
-		Role:         role,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(expTime) * time.Second)), // Adding expTime to current time
-			IssuedAt:  jwt.NewNumericDate(time.Now()),                                           // Current time
-			NotBefore: jwt.NewNumericDate(time.Now()),                                           // Current time
-		},
-	}
+	// Generate token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secretKey))
 }
