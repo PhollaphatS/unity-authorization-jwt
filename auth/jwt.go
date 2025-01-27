@@ -39,10 +39,12 @@ func ExtractToken(c *gin.Context) (string, error) {
 	}
 
 	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+	if len(parts) == 1 {
+		// If there is only one part (just the token), treat it as the token directly
+		return parts[0], nil
+	} else if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
 		return "", fmt.Errorf("invalid Authorization header format")
 	}
-
 	return parts[1], nil
 }
 
