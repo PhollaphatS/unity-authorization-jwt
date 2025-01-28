@@ -3,6 +3,8 @@ package middleware
 import (
 	"github.com/PhollaphatS/unity-authorization-jwt/auth"
 	"github.com/gin-gonic/gin"
+	"net/http"
+	"strings"
 )
 
 type AuthConfig struct {
@@ -13,13 +15,20 @@ type AuthConfig struct {
 
 // AuthMiddleware creates a JWT authentication middleware
 func AuthMiddleware(config AuthConfig) gin.HandlerFunc {
+	normalizedSkipPaths := make(map[string]struct{})
+	for _, path := range config.SkipPaths {
+		normalized := strings.TrimRight(path, "/")
+		normalizedSkipPaths[normalized] = struct{}{}
+	}
+
 	return func(c *gin.Context) {
-		// Skip authentication for specified paths
-		for _, path := range config.SkipPaths {
-			if c.Request.URL.Path == path {
-				c.Next()
-				return
-			}
+		// Normalize request path once
+		requestPath := strings.TrimRight(c.Request.URL.Path, "/")
+
+		// Check if path should be skipped using map lookup
+		if _, shouldSkip := normalizedSkipPaths[requestPath]; shouldSkip {
+			c.Next()
+			return
 		}
 
 		// Extract and validate token
@@ -31,7 +40,7 @@ func AuthMiddleware(config AuthConfig) gin.HandlerFunc {
 
 		// Check role if required
 		if config.RequireRole != "" && claims.Role != config.RequireRole {
-			c.JSON(403, gin.H{"error": "forbidden: insufficient role"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden: insufficient role"})
 			c.Abort()
 			return
 		}
@@ -43,17 +52,20 @@ func AuthMiddleware(config AuthConfig) gin.HandlerFunc {
 }
 
 func AuthWithoutExpTimeMiddleware(config AuthConfig) gin.HandlerFunc {
+	normalizedSkipPaths := make(map[string]struct{})
+	for _, path := range config.SkipPaths {
+		normalized := strings.TrimRight(path, "/")
+		normalizedSkipPaths[normalized] = struct{}{}
+	}
+
 	return func(c *gin.Context) {
-		// Extract the request path without query parameters
-		requestPath := c.FullPath()
+		// Normalize request path once
+		requestPath := strings.TrimRight(c.Request.URL.Path, "/")
 
-		// Skip authentication for specified paths
-		for _, path := range config.SkipPaths {
-			if requestPath == path {
-				c.Next() // Skip authentication and continue to the next handler
-				return
-			}
-
+		// Check if path should be skipped using map lookup
+		if _, shouldSkip := normalizedSkipPaths[requestPath]; shouldSkip {
+			c.Next()
+			return
 		}
 
 		// Extract token from the Authorization header
@@ -74,12 +86,12 @@ func AuthWithoutExpTimeMiddleware(config AuthConfig) gin.HandlerFunc {
 
 		// Check if the required role matches (if any)
 		if config.RequireRole != "" && claims.Role != config.RequireRole {
-			c.JSON(403, gin.H{"error": "Forbidden: insufficient role"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden: insufficient role"})
 			c.Abort()
 			return
 		}
 
-		// Store the claims in the context for further use
+		// Store claims in context
 		c.Set("claims", claims)
 		c.Next()
 	}
