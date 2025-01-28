@@ -3,6 +3,7 @@ package middleware
 import (
 	"github.com/PhollaphatS/unity-authorization-jwt/auth"
 	"github.com/gin-gonic/gin"
+	"strings"
 )
 
 type AuthConfig struct {
@@ -15,15 +16,26 @@ type AuthConfig struct {
 func AuthMiddleware(config AuthConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract the request path without query parameters
-		requestPath := c.FullPath()
+		requestPath := c.Request.URL.Path
+
+		// Normalize paths by removing trailing slashes
+		if strings.HasSuffix(requestPath, "/") {
+			requestPath = strings.TrimSuffix(requestPath, "/")
+		}
 
 		// Skip authentication for specified paths
 		for _, path := range config.SkipPaths {
-			if requestPath == path {
+			// Normalize the skip path by removing trailing slashes
+			skipPath := path
+			if strings.HasSuffix(skipPath, "/") {
+				skipPath = strings.TrimSuffix(skipPath, "/")
+			}
+
+			// Compare normalized paths
+			if requestPath == skipPath {
 				c.Next() // Skip authentication and continue to the next handler
 				return
 			}
-
 		}
 
 		// Extract and validate token
