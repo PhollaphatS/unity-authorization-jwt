@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"context"
 	"github.com/PhollaphatS/unity-authorization-jwt/auth"
 	"github.com/gin-gonic/gin"
 	"strings"
+	"time"
 )
 
 type AuthConfig struct {
@@ -14,7 +16,6 @@ type AuthConfig struct {
 
 // AuthMiddleware creates a JWT authentication middleware
 func AuthMiddleware(config AuthConfig) gin.HandlerFunc {
-	// Pre-normalize skip paths during middleware initialization
 	normalizedSkipPaths := make(map[string]struct{})
 	for _, path := range config.SkipPaths {
 		normalized := strings.TrimRight(path, "/")
@@ -22,6 +23,13 @@ func AuthMiddleware(config AuthConfig) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
+		// Set timeout for the entire request chain
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+		defer cancel()
+
+		// Replace the request's context
+		c.Request = c.Request.WithContext(ctx)
+
 		// Normalize request path once
 		requestPath := strings.TrimRight(c.Request.URL.Path, "/")
 
