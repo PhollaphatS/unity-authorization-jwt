@@ -53,6 +53,7 @@ func AuthWithoutExpTimeMiddleware(config AuthConfig) gin.HandlerFunc {
 				c.Next() // Skip authentication and continue to the next handler
 				return
 			}
+
 		}
 
 		// Extract token from the Authorization header
