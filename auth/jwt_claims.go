@@ -1,35 +1,32 @@
 package auth
 
 import (
-	"fmt"
+	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"net/http"
 )
+
+var ErrNoClaimsFound = errors.New("no claims found")
+var ErrInvalidClaimsType = errors.New("invalid claims type")
+var ErrInvalidCustomerID = errors.New("invalid customer ID format")
 
 func GetCustomerIDFromClaims(c *gin.Context) (uuid.UUID, error) {
 	// Get claims from context
 	claims, exists := c.Get("claims")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: no claims found"})
-		c.Abort()
-		return uuid.Nil, fmt.Errorf("no claims found")
+		return uuid.Nil, ErrNoClaimsFound
 	}
 
 	// Type assert claims
 	jwtClaim, ok := claims.(*JWTClaims)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: invalid claims"})
-		c.Abort()
-		return uuid.Nil, fmt.Errorf("invalid claims type")
+		return uuid.Nil, ErrInvalidClaimsType
 	}
 
 	// Parse and validate CustomerID
 	customerID, err := uuid.Parse(jwtClaim.CustomerID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid CustomerID"})
-		c.Abort()
-		return uuid.Nil, fmt.Errorf("invalid customer ID format: %w", err)
+		return uuid.Nil, ErrInvalidCustomerID
 	}
 
 	return customerID, nil
