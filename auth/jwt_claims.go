@@ -4,11 +4,24 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"net/http"
 )
 
 var ErrNoClaimsFound = errors.New("no claims found")
 var ErrInvalidClaimsType = errors.New("invalid claims type")
 var ErrInvalidCustomerID = errors.New("invalid customer ID format")
+
+var errorResponses = map[error]gin.H{
+	ErrNoClaimsFound:     {"error": "Unauthorized: no claims found"},
+	ErrInvalidClaimsType: {"error": "Unauthorized: invalid claims"},
+	ErrInvalidCustomerID: {"error": "Invalid CustomerID format"},
+}
+
+var statusCodes = map[error]int{
+	ErrNoClaimsFound:     http.StatusUnauthorized,
+	ErrInvalidClaimsType: http.StatusUnauthorized,
+	ErrInvalidCustomerID: http.StatusBadRequest,
+}
 
 func GetCustomerIDFromClaims(c *gin.Context) (uuid.UUID, error) {
 	// Get claims from context
@@ -30,4 +43,12 @@ func GetCustomerIDFromClaims(c *gin.Context) (uuid.UUID, error) {
 	}
 
 	return customerID, nil
+}
+
+func HandleClaimsError(c *gin.Context, err error) {
+	status := statusCodes[err]
+	if status == 0 {
+		status = http.StatusInternalServerError
+	}
+	c.JSON(status, errorResponses[err])
 }
