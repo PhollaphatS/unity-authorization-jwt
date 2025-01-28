@@ -14,28 +14,21 @@ type AuthConfig struct {
 
 // AuthMiddleware creates a JWT authentication middleware
 func AuthMiddleware(config AuthConfig) gin.HandlerFunc {
+	// Pre-normalize skip paths during middleware initialization
+	normalizedSkipPaths := make(map[string]struct{})
+	for _, path := range config.SkipPaths {
+		normalized := strings.TrimRight(path, "/")
+		normalizedSkipPaths[normalized] = struct{}{}
+	}
+
 	return func(c *gin.Context) {
-		// Extract the request path without query parameters
-		requestPath := c.Request.URL.Path
+		// Normalize request path once
+		requestPath := strings.TrimRight(c.Request.URL.Path, "/")
 
-		// Normalize paths by removing trailing slashes
-		if strings.HasSuffix(requestPath, "/") {
-			requestPath = strings.TrimSuffix(requestPath, "/")
-		}
-
-		// Skip authentication for specified paths
-		for _, path := range config.SkipPaths {
-			// Normalize the skip path by removing trailing slashes
-			skipPath := path
-			if strings.HasSuffix(skipPath, "/") {
-				skipPath = strings.TrimSuffix(skipPath, "/")
-			}
-
-			// Compare normalized paths
-			if requestPath == skipPath {
-				c.Next() // Skip authentication and continue to the next handler
-				return
-			}
+		// Check if path should be skipped using map lookup
+		if _, shouldSkip := normalizedSkipPaths[requestPath]; shouldSkip {
+			c.Next()
+			return
 		}
 
 		// Extract and validate token
