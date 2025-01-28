@@ -1,11 +1,10 @@
 package middleware
 
 import (
-	"context"
 	"github.com/PhollaphatS/unity-authorization-jwt/auth"
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"strings"
-	"time"
 )
 
 type AuthConfig struct {
@@ -23,13 +22,6 @@ func AuthMiddleware(config AuthConfig) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
-		// Set timeout for the entire request chain
-		ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
-		defer cancel()
-
-		// Replace the request's context
-		c.Request = c.Request.WithContext(ctx)
-
 		// Normalize request path once
 		requestPath := strings.TrimRight(c.Request.URL.Path, "/")
 
@@ -48,7 +40,7 @@ func AuthMiddleware(config AuthConfig) gin.HandlerFunc {
 
 		// Check role if required
 		if config.RequireRole != "" && claims.Role != config.RequireRole {
-			c.JSON(403, gin.H{"error": "forbidden: insufficient role"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden: insufficient role"})
 			c.Abort()
 			return
 		}
