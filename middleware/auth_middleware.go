@@ -44,10 +44,13 @@ func AuthMiddleware(config AuthConfig) gin.HandlerFunc {
 
 func AuthWithoutExpTimeMiddleware(config AuthConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Extract the request path without query parameters
+		requestPath := c.FullPath()
+
 		// Skip authentication for specified paths
 		for _, path := range config.SkipPaths {
-			if c.Request.URL.Path == path {
-				c.Next()
+			if requestPath == path {
+				c.Next() // Skip authentication and continue to the next handler
 				return
 			}
 		}
