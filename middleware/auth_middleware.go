@@ -49,6 +49,7 @@ func AuthWithoutExpTimeMiddleware(config AuthConfig) gin.HandlerFunc {
 
 		// Skip authentication for specified paths
 		for _, path := range config.SkipPaths {
+			artyarty
 			if requestPath == path {
 				c.Next() // Skip authentication and continue to the next handler
 				return
