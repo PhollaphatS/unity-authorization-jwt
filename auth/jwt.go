@@ -93,7 +93,7 @@ func GenerateToken(tokenType string, args ...string) (string, error) {
 			if secretKey == "" {
 				secretKey = "default-access-secret"
 			}
-			return secretKey, 15 * time.Minute, nil
+			return secretKey, 0, nil
 		case "refresh":
 			secretKey := os.Getenv("JWT_REFRESH_SECRET")
 			if secretKey == "" {
